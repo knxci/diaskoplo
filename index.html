@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sesi Potret</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#180510;
+    --bg-mid:#3d0f24;
+    --bg-warm:#5c1a2e;
+    --rose-gold:#d9a679;
+    --blush:#e8c4b8;
+    --cream:#f7ece1;
+    --shadow: rgba(0,0,0,0.55);
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+
+  html,body{
+    height:100%;
+    background:var(--bg-deep);
+    overflow:hidden;
+    font-family:'Cormorant Garamond', serif;
+    color:var(--cream);
+  }
+
+  .screen{
+    position:fixed; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    transition:opacity 0.9s ease, visibility 0.9s ease;
+  }
+
+  /* ---------- HALAMAN 1 : kosong + tombol start ---------- */
+  #page1{
+    background: radial-gradient(ellipse at 50% 45%, var(--bg-warm) 0%, var(--bg-deep) 75%);
+    z-index:10;
+  }
+  #page1.hide{ opacity:0; visibility:hidden; pointer-events:none; }
+
+  #startBtn{
+    background:transparent;
+    border:1px solid var(--rose-gold);
+    color:var(--cream);
+    font-family:'Cormorant Garamond', serif;
+    letter-spacing:0.25em;
+    text-transform:uppercase;
+    font-size:0.85rem;
+    padding:16px 46px;
+    border-radius:999px;
+    cursor:pointer;
+    transition:all 0.4s ease;
+  }
+  #startBtn:hover{
+    background:var(--rose-gold);
+    color:var(--bg-deep);
+    box-shadow:0 0 30px rgba(217,166,121,0.5);
+  }
+
+  /* ---------- HALAMAN 2 : collage hati ---------- */
+  #page2{
+    background: radial-gradient(ellipse at 50% 30%, var(--bg-warm) 0%, var(--bg-mid) 45%, var(--bg-deep) 100%);
+    opacity:0;
+    visibility:hidden;
+    z-index:5;
+    overflow:hidden;
+  }
+  #page2.show{ opacity:1; visibility:visible; }
+
+  #specks{ position:absolute; inset:0; pointer-events:none; z-index:1; }
+  .speck{
+    position:absolute; width:3px; height:3px; border-radius:50%;
+    background:var(--rose-gold); opacity:0.3;
+    animation:drift linear infinite;
+  }
+  @keyframes drift{
+    0%{ transform:translateY(0); opacity:0; }
+    12%{ opacity:0.5; }
+    88%{ opacity:0.25; }
+    100%{ transform:translateY(-105vh); opacity:0; }
+  }
+
+  #heart-container{
+    position:relative;
+    width:min(94vw, 640px);
+    height:min(94vw, 640px);
+    z-index:2;
+  }
+
+  .photo{
+    position:absolute;
+    top:0; left:0;
+    aspect-ratio: 1 / 1;
+    background:var(--cream);
+    padding:5px 5px 5px 5px;
+    border-radius:4px;
+    box-shadow:0 10px 26px var(--shadow);
+    opacity:0;
+    transform:translate(-50%,-50%) scale(0.15) rotate(var(--rot));
+    transition:opacity 0.9s cubic-bezier(.2,.8,.3,1), transform 0.9s cubic-bezier(.2,.8,.3,1);
+  }
+  .photo.show{
+    opacity:1;
+    transform:translate(-50%,-50%) scale(1) rotate(var(--rot));
+  }
+  .photo img{
+    display:block;
+    width:100%; height:100%;
+    object-fit:cover;
+    border-radius:2px;
+    background:#2a2a2a;
+  }
+
+  #musicHint{
+    position:fixed; bottom:22px; left:50%; transform:translateX(-50%);
+    font-size:0.72rem; letter-spacing:0.2em; text-transform:uppercase;
+    color:var(--blush); opacity:0; transition:opacity 1.5s ease;
+    z-index:6; cursor:pointer;
+  }
+  #musicHint.show{ opacity:0.65; }
+  #musicHint:hover{ opacity:1; }
+
+  @media (prefers-reduced-motion: reduce){
+    .photo, .speck{ animation:none !important; transition:opacity .4s ease !important; }
+  }
+</style>
+</head>
+<body>
+
+<div id="page1" class="screen">
+  <button id="startBtn">▸ Mulai</button>
+</div>
+
+<div id="page2" class="screen">
+  <div id="specks"></div>
+  <div id="heart-container"></div>
+</div>
+
+<div id="musicHint">♪ tap untuk mute/unmute musik</div>
+
+<audio id="bgm" src="lagu.mp3" loop preload="auto"></audio>
+
+<script>
+/* ====================== KONFIGURASI — EDIT DI SINI ======================
+   1. Ganti "lagu.mp3" di tag <audio> atas dengan nama file musik kamu.
+   2. Isi PHOTOS dengan 23 path foto (rasio 1:1 / square disarankan).
+      Urutan array = urutan LAYOUT di bawah (mengikuti bentuk custom kamu),
+      dibaca kiri-ke-kanan lalu atas-ke-bawah sesuai gambar referensi.
+   ========================================================================= */
+
+const PHOTOS = [
+  "foto/1.jpg","foto/2.jpg","foto/3.jpg","foto/4.jpg","foto/5.jpg",
+  "foto/6.jpg","foto/7.jpg","foto/8.jpg","foto/9.jpg","foto/10.jpg",
+  "foto/11.jpg","foto/12.jpg","foto/13.jpg","foto/14.jpg","foto/15.jpg",
+  "foto/16.jpg","foto/17.jpg","foto/18.jpg","foto/19.jpg","foto/20.jpg",
+  "foto/21.jpg","foto/22.jpg","foto/23.jpg"
+];
+
+/* Koordinat persis hasil rekonstruksi dari gambar referensi kamu.
+   Ruang koordinat asli: lebar 396 x tinggi 556 (satuan px imajiner). */
+const LAYOUT = [
+  {x:85.5, y:99},   {x:134.5, y:99},  {x:183.5, y:99},
+  {x:185.5, y:146.0},
+  {x:88.5, y:183.5},
+  {x:188.5, y:202.0},
+  {x:88.5, y:241.5},
+  {x:298.0, y:250.0},
+  {x:189.5, y:254.5},
+  {x:246.0, y:254.0},
+  {x:86.0, y:301.5},
+  {x:304.5, y:312.5},
+  {x:86.5, y:358.5},
+  {x:196.5, y:370.0},
+  {x:249.5, y:366.5},
+  {x:302.5, y:373.5},
+  {x:90.0, y:426.5},
+  {x:303.5, y:427.5},
+  {x:87.5, y:485.5},
+  {x:141.5, y:485.5},
+  {x:196.5, y:486.5},
+  {x:247.5, y:485.5},
+  {x:301.5, y:480.5}
+];
+const SPACE_W = 396, SPACE_H = 556, TILE = 50; // ukuran ruang asal & sisi kotak asli
+
+const container = document.getElementById('heart-container');
+
+function render(){
+  container.innerHTML = '';
+  const cw = container.clientWidth;
+  const scale = cw / SPACE_W;
+
+  container.style.height = (SPACE_H * scale) + 'px';
+
+  LAYOUT.forEach((p, i)=>{
+    const div = document.createElement('div');
+    div.className = 'photo';
+    div.style.left = (p.x * scale) + 'px';
+    div.style.top = (p.y * scale) + 'px';
+    div.style.width = (TILE * scale) + 'px';
+    div.style.setProperty('--rot', (Math.random()*10 - 5) + 'deg');
+    div.style.transitionDelay = (i * 55) + 'ms';
+
+    const img = document.createElement('img');
+    img.src = PHOTOS[i] || '';
+    img.alt = 'kenangan ' + (i+1);
+    div.appendChild(img);
+
+    container.appendChild(div);
+  });
+}
+
+render();
+window.addEventListener('resize', render);
+
+// ambient specks
+const specksEl = document.getElementById('specks');
+for(let i=0;i<24;i++){
+  const s = document.createElement('div');
+  s.className='speck';
+  s.style.left = Math.random()*100+'%';
+  s.style.bottom = (-10 - Math.random()*20)+'px';
+  s.style.animationDuration = (10 + Math.random()*12)+'s';
+  s.style.animationDelay = (Math.random()*10)+'s';
+  specksEl.appendChild(s);
+}
+
+// navigasi halaman 1 -> halaman 2 + musik
+const page1 = document.getElementById('page1');
+const page2 = document.getElementById('page2');
+const startBtn = document.getElementById('startBtn');
+const bgm = document.getElementById('bgm');
+const musicHint = document.getElementById('musicHint');
+
+startBtn.addEventListener('click', ()=>{
+  bgm.volume = 0.85;
+  bgm.play().catch(()=>{ /* file musik belum ada, tetap lanjut ke halaman 2 */ });
+
+  page1.classList.add('hide');
+  page2.classList.add('show');
+  musicHint.classList.add('show');
+
+  setTimeout(()=>{
+    document.querySelectorAll('.photo').forEach(p=>p.classList.add('show'));
+  }, 300);
+});
+
+musicHint.addEventListener('click', ()=>{
+  bgm.muted = !bgm.muted;
+});
+</script>
+
+</body>
+</html>
